@@ -2,14 +2,20 @@
 /* eslint-disable no-undef */
 
 function setup () {
-  createCanvas(600, 600)
+  createCanvas(windowWidth, windowHeight)
   background(0)
-  N_CITIES = 20
+  N_CITIES = 100
+  POP_N = 1000
   cities = []
+  population = []
+  evolutaion = 1
   for (let i = 0; i < N_CITIES; i++) {
-    cities.push(new City(random(50, width - 50), random(50, height - 50), i))
+    cities.push(new City(random(100, width - 100), random(100, height - 100), i))
   }
-  bestRoute = new Route()
+  for (let i = 0; i < POP_N; i++) {
+    population.push(new Route())
+  }
+  bestRoute = _.sample(population)
 }
 
 function draw () {
@@ -17,13 +23,25 @@ function draw () {
   noStroke()
   bestRoute.display()
   cities.forEach((city) => city.display())
+  fill(255)
+  text(`Evolutaion: ${evolutaion}`, 30, 40)
+  text(`Distance: ${parseInt(bestRoute.distance())}`, 30, 70)
+  noFill()
 
-  for (let i = 2; i < 6; i++) {
-    mutated = bestRoute.mutated(i)
-    if (mutated.distance() < bestRoute.distance()) {
-      bestRoute = mutated
-    }
+  population = _.sortBy(population, [(p) => p.distance()])
+  population = population.slice(0, POP_N)
+
+  if (population[0].distance() < bestRoute.distance()) {
+    bestRoute = population[0]
   }
+
+  for (let i = 0; i < POP_N; i++) {
+    const [mother, father] = _.sampleSize(population, 2)
+    const child = Route.crossover(mother, father)
+    population.push(child)
+  }
+
+  evolutaion++
 }
 
 class City {
@@ -46,6 +64,20 @@ class City {
 class Route {
   constructor () {
     this.cityNums = _.sampleSize(_.range(N_CITIES), N_CITIES)
+  }
+
+  static crossover (mother, father) {
+    const child = new Route()
+    const index = _.random(1, N_CITIES - 2)
+    child.cityNums = mother.cityNums.concat().slice(0, index)
+    if (_.random(1, true) < 0.5) {
+      child.cityNums = child.cityNums.reverse()
+    }
+    const nonslice = _.filter(father.cityNums, (cityNum) => {
+      return !child.cityNums.includes(cityNum)
+    })
+    child.cityNums = child.cityNums.concat(nonslice)
+    return child
   }
 
   display () {
